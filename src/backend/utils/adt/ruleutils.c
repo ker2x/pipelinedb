@@ -34,6 +34,7 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_trigger.h"
 #include "catalog/pg_type.h"
+#include "catalog/pipeline_query_fn.h"
 #include "catalog/pipeline_stream_fn.h"
 #include "commands/defrem.h"
 #include "commands/tablespace.h"
@@ -43,6 +44,7 @@
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/tlist.h"
+#include "parser/analyze.h"
 #include "parser/keywords.h"
 #include "parser/parse_agg.h"
 #include "parser/parse_func.h"
@@ -422,6 +424,52 @@ static char *flatten_reloptions(Oid relid);
 
 #define only_marker(rte)  ((rte)->inh ? "" : "ONLY ")
 
+
+/*
+ * deparse_cont_query_def
+ */
+char *
+deparse_cont_query_def(Query *query)
+{
+	StringInfo buf = makeStringInfo();
+	deparse_context context;
+	deparse_namespace dpns;
+	char *sql;
+
+	/* Guard against excessively long or deeply-nested queries */
+	CHECK_FOR_INTERRUPTS();
+	check_stack_depth();
+
+	/*
+	 * Before we begin to examine the query, acquire locks on referenced
+	 * relations, and fix up deleted columns in JOIN RTEs.  This ensures
+	 * consistent results.  Note we assume it's OK to scribble on the passed
+	 * querytree!
+	 *
+	 * We are only deparsing the query (we are not about to execute it), so we
+	 * only need AccessShareLock on the relations it mentions.
+	 */
+	AcquireRewriteLocks(query, false, false);
+
+	context.buf = buf;
+	context.namespaces = list_make1(&dpns);
+	context.windowClause = NIL;
+	context.windowTList = NIL;
+	context.varprefix = list_length(query->rtable) != 1;
+	context.prettyFlags = 0;
+	context.wrapColumn = 0;
+	context.indentLevel = 0;
+	context.iscombine = false;
+
+	set_deparse_for_query(&dpns, query, NIL);
+	get_select_query_def(query, &context, NULL);
+
+	sql = buf->data;
+
+	pfree(buf);
+
+	return sql;
+}
 
 /* ----------
  * get_ruledef			- Do it all and return a text
@@ -5687,7 +5735,15 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 	if (context->iscombine)
 		appendStringInfo(buf, "%d", attnum);
 	else if (attname)
+	{
 		appendStringInfoString(buf, quote_identifier(attname));
+		/* Always print explicit type cast for inferred stream columns */
+		if (is_inferred_stream_rte(rte))
+			appendStringInfo(buf, "::%s",
+					format_type_with_typemod(var->vartype,
+							var->vartypmod == InvalidOid ? -1 : var->vartypmod));
+
+	}
 	else
 	{
 		appendStringInfoChar(buf, '*');
@@ -8368,24 +8424,12 @@ get_from_clause_item(Node *jtnode, Query *query, deparse_context *context)
 		switch (rte->rtekind)
 		{
 			case RTE_RELATION:
+			case RTE_STREAM:
 				/* Normal relation RTE */
 				appendStringInfo(buf, "%s%s",
 								 only_marker(rte),
 								 generate_relation_name(rte->relid,
 														context->namespaces));
-				break;
-			case RTE_STREAM:
-				/* Stream RTE */
-				{
-					Oid namespace = get_rel_namespace(rte->relid);
-					char *qualified_name;
-
-					if (namespace != InvalidOid)
-						qualified_name = quote_qualified_identifier(get_namespace_name(namespace), rte->relname);
-					else
-						qualified_name = rte->relname;
-					appendStringInfo(buf, "%s", qualified_name);
-				}
 				break;
 			case RTE_SUBQUERY:
 				/* Subquery RTE */
