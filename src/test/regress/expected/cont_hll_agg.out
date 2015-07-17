@@ -108,16 +108,16 @@ INSERT INTO test_hll_agg_stream (k, x, y) VALUES ('0', 0, '0'), ('1', 1, '100'),
 SELECT * FROM test_hll_agg0 ORDER BY k;
  k |                  hll_agg                  
 ---+-------------------------------------------
- 0 | { p = 14, cardinality = 10, size = 12kB }
- 1 | { p = 14, cardinality = 10, size = 12kB }
- 2 | { p = 14, cardinality = 10, size = 12kB }
- 3 | { p = 14, cardinality = 10, size = 12kB }
- 4 | { p = 14, cardinality = 10, size = 12kB }
- 5 | { p = 14, cardinality = 10, size = 12kB }
- 6 | { p = 14, cardinality = 10, size = 12kB }
- 7 | { p = 14, cardinality = 10, size = 12kB }
- 8 | { p = 14, cardinality = 10, size = 12kB }
- 9 | { p = 14, cardinality = 10, size = 12kB }
+ 0 | { p = 14, cardinality = 10, size = 16kB }
+ 1 | { p = 14, cardinality = 10, size = 16kB }
+ 2 | { p = 14, cardinality = 10, size = 16kB }
+ 3 | { p = 14, cardinality = 10, size = 16kB }
+ 4 | { p = 14, cardinality = 10, size = 16kB }
+ 5 | { p = 14, cardinality = 10, size = 16kB }
+ 6 | { p = 14, cardinality = 10, size = 16kB }
+ 7 | { p = 14, cardinality = 10, size = 16kB }
+ 8 | { p = 14, cardinality = 10, size = 16kB }
+ 9 | { p = 14, cardinality = 10, size = 16kB }
 (10 rows)
 
 SELECT * FROM test_hll_agg1 ORDER BY k;
@@ -153,16 +153,16 @@ SELECT * FROM test_hll_agg2 ORDER BY k;
 SELECT * FROM test_sw_hll_agg0 ORDER BY k;
  k |                  hll_agg                  
 ---+-------------------------------------------
- 0 | { p = 14, cardinality = 10, size = 12kB }
- 1 | { p = 14, cardinality = 10, size = 12kB }
- 2 | { p = 14, cardinality = 10, size = 12kB }
- 3 | { p = 14, cardinality = 10, size = 12kB }
- 4 | { p = 14, cardinality = 10, size = 12kB }
- 5 | { p = 14, cardinality = 10, size = 12kB }
- 6 | { p = 14, cardinality = 10, size = 12kB }
- 7 | { p = 14, cardinality = 10, size = 12kB }
- 8 | { p = 14, cardinality = 10, size = 12kB }
- 9 | { p = 14, cardinality = 10, size = 12kB }
+ 0 | { p = 14, cardinality = 10, size = 16kB }
+ 1 | { p = 14, cardinality = 10, size = 16kB }
+ 2 | { p = 14, cardinality = 10, size = 16kB }
+ 3 | { p = 14, cardinality = 10, size = 16kB }
+ 4 | { p = 14, cardinality = 10, size = 16kB }
+ 5 | { p = 14, cardinality = 10, size = 16kB }
+ 6 | { p = 14, cardinality = 10, size = 16kB }
+ 7 | { p = 14, cardinality = 10, size = 16kB }
+ 8 | { p = 14, cardinality = 10, size = 16kB }
+ 9 | { p = 14, cardinality = 10, size = 16kB }
 (10 rows)
 
 SELECT * FROM test_sw_hll_agg1 ORDER BY k;
@@ -198,7 +198,7 @@ SELECT * FROM test_sw_hll_agg2 ORDER BY k;
 SELECT combine(hll_agg) FROM test_hll_agg0;
                   combine                   
 --------------------------------------------
- { p = 14, cardinality = 100, size = 12kB }
+ { p = 14, cardinality = 100, size = 16kB }
 (1 row)
 
 SELECT hll_cardinality(combine(hll_agg)) FROM test_hll_agg0;
