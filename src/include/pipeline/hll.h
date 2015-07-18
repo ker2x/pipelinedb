@@ -22,6 +22,10 @@
 
 #define HLL_MAX_SPARSE_BYTES 11000
 
+#define HLL_LAZY 'l'
+#define HLL_LAZY_INITIAL_SIZE sizeof(uint64) * 256
+#define HLL_LAZY_MAX_SIZE 16 * 1024 /* 16KB, which is the size of a dense HLL when p == 14 */
+
 #define HLL_SPARSE_DIRTY 's'
 #define HLL_SPARSE_CLEAN 'S'
 #define HLL_DENSE_DIRTY 'd'
@@ -50,6 +54,7 @@ typedef struct HyperLogLog
 HyperLogLog *HLLCreateWithP(int p);
 HyperLogLog *HLLCreate(void);
 HyperLogLog *HLLCreateFromRaw(uint8 *M, int mlen, uint8 p, char encoding);
+HyperLogLog *HLLCreateLazy(void);
 HyperLogLog *HLLAdd(HyperLogLog *hll, void *elem, Size len, int *result);
 HyperLogLog *HLLCopy(HyperLogLog *src);
 uint64 HLLCardinality(HyperLogLog *hll);

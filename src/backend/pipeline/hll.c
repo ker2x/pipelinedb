@@ -147,6 +147,7 @@
 
 #define HLL_IS_DENSE(hll) ((hll)->encoding == HLL_DENSE_DIRTY || (hll)->encoding == HLL_DENSE_CLEAN)
 #define HLL_IS_CLEAN(hll) ((hll)->encoding == HLL_DENSE_CLEAN || (hll)->encoding == HLL_SPARSE_CLEAN)
+#define HLL_IS_LAZY(hll) ((hll)->encoding == HLL_LAZY)
 
 #define MURMUR_SEED 0xbee5bf4112801383L
 
@@ -221,12 +222,18 @@ hll_sparse_to_dense(HyperLogLog *sparse)
 static uint8
 num_leading_zeroes(HyperLogLog *hll, void *elem, Size size, int *m)
 {
-	uint64 h = MurmurHash3_64(elem, size, MURMUR_SEED);
+	uint64 h;
 	uint64 index;
 	uint64 bit;
 	uint8 count = 0;
 	int numregs = (1 << hll->p);
 	int mask = (numregs - 1);
+
+	/* if the number of bytes to hash is 0, the element is already hashed */
+	if (size > 0)
+		h = MurmurHash3_64(elem, size, MURMUR_SEED);
+	else
+		h = (uint64) *((uint64 *) elem);
 
 	/* register index is the first p bits of the hash */
   index = h & mask;
@@ -711,6 +718,37 @@ HLLCreate(void)
 }
 
 /*
+ * HLLCreateLazy
+ *
+ * Creates a HyperLogLog that stores raw hashes for as long as possible before
+ * encoding them into registers. This is useful if many unions are expected,
+ * because if a lazy HLL is a union operand, its raw hashes just need to be
+ * added to the resulting HLL, which is much more efficient than an actual union.
+ */
+HyperLogLog *
+HLLCreateLazy(void)
+{
+	Size size;
+	HyperLogLog *hll;
+	uint32 mem =  HLL_LAZY_INITIAL_SIZE;
+
+	size = sizeof(HyperLogLog) + sizeof(int) + mem;
+
+	hll = palloc0(size);
+	hll->p = -1;
+	hll->encoding = HLL_LAZY;
+
+	/* we use mlen as the write offset */
+	hll->mlen = 0;
+
+	/* the first 4B stores the amount of free memory beyond the write offset (mlen) */
+	memcpy(hll->M,  &mem, sizeof(uint32));
+	hll->mlen += sizeof(uint32);
+
+	return hll;
+}
+
+/*
  * HLLCreateFromRaw
  *
  * Creates a HyperLogLog with the given raw data
@@ -747,6 +785,73 @@ HLLCopy(HyperLogLog *src)
 }
 
 /*
+ * hll_lazy_eval
+ *
+ * Takes all of the lazy HLL's hash values and converts them to an actual
+ * HLL representation
+ */
+static HyperLogLog *
+hll_lazy_eval(HyperLogLog *hll)
+{
+	HyperLogLog *result = HLLCreate();
+	uint32 offset = sizeof(uint32);
+
+	Assert(HLL_IS_LAZY(hll));
+
+	while (offset < hll->mlen)
+	{
+		uint64 h = 0;
+		int changed;
+
+		memcpy(&h, hll->M + offset, sizeof(uint64));
+		offset += sizeof(uint64);
+
+		result = HLLAdd(result, &h, 0, &changed);
+	}
+
+	return result;
+}
+
+/*
+ * hll_lazy_add
+ *
+ * Adds an element to the lazy HLL's list of hashes
+ */
+static HyperLogLog *
+hll_lazy_add(HyperLogLog *hll, void *elem, Size size, int *result)
+{
+	uint64 h;
+	uint32 mem;
+
+	Assert(HLL_IS_LAZY(hll));
+
+	memcpy(&mem, hll->M, sizeof(uint32));
+
+	/* if we need more room, double the buffer */
+	if (mem - hll->mlen < sizeof(uint64))
+	{
+		mem *= 2;
+		if (mem > HLL_LAZY_MAX_SIZE)
+		{
+			hll = hll_lazy_eval(hll);
+			return HLLAdd(hll, elem, size, result);
+		}
+		hll = (HyperLogLog *) repalloc(hll, sizeof(HyperLogLog) + sizeof(int) + mem);
+		memcpy(hll->M, &mem, sizeof(uint32));
+	}
+
+	h = MurmurHash3_64(elem, size, MURMUR_SEED);
+
+	memcpy(hll->M + hll->mlen, &h, sizeof(uint64));
+	hll->mlen += sizeof(uint64);
+
+	/* just assume the cardinality changed since we don't really know */
+	*result = 1;
+
+	return hll;
+}
+
+/*
  * HLLAdd
  *
  * Adds an element to the given HLL
@@ -757,12 +862,14 @@ HLLAdd(HyperLogLog *hll, void *elem, Size len, int *result)
 	HyperLogLog *ret;
 	if (HLL_IS_SPARSE(hll))
 		ret = hll_sparse_add(hll, elem, len, result);
-	else
+	else if (HLL_IS_DENSE(hll))
 		ret = hll_dense_add(hll, elem, len, result);
+	else if (HLL_IS_LAZY(hll))
+		ret = hll_lazy_add(hll, elem, len, result);
 
 	/* if the cardinality changed, invalidate the cached cardinality */
 	if (*result)
-		ret->encoding = HLL_IS_SPARSE(ret) ? HLL_SPARSE_DIRTY : HLL_DENSE_DIRTY;
+		ret->encoding = HLL_IS_LAZY(ret) ? HLL_LAZY : (HLL_IS_SPARSE(ret) ? HLL_SPARSE_DIRTY : HLL_DENSE_DIRTY);
 
 	return ret;
 }
@@ -775,9 +882,9 @@ HLLAdd(HyperLogLog *hll, void *elem, Size len, int *result)
 uint64
 HLLCardinality(HyperLogLog *hll)
 {
-  double m = 1 << hll->p;
+  double m;
   double E;
-  double alpha = 0.7213 / (1 + 1.079 / m);
+  double alpha;
   int j;
   int ez; /* Number of registers equal to 0. */
 
@@ -798,6 +905,12 @@ HLLCardinality(HyperLogLog *hll)
 		}
 		initialized = true;
   }
+
+  if (HLL_IS_LAZY(hll))
+		hll = hll_lazy_eval(hll);
+
+  m = 1 << hll->p;
+  alpha = 0.7213 / (1 + 1.079 / m);
 
   /*
    * If nothing has changed since the last cardinality computation,
@@ -869,6 +982,9 @@ HLLUnion(HyperLogLog *result, HyperLogLog *incoming)
   int m = (1 << result->p);
 
   /* results always use the dense representation */
+  if (HLL_IS_LAZY(result))
+		result = hll_lazy_eval(result);
+
   if (HLL_IS_SPARSE(result))
 		result = hll_sparse_to_dense(result);
 
@@ -884,6 +1000,21 @@ HLLUnion(HyperLogLog *result, HyperLogLog *incoming)
 			r1 = incoming->M[reg];
 			result->M[reg] =  Max(r0, r1);
 			r0 = r1;
+		}
+	}
+	else if (HLL_IS_LAZY(incoming))
+	{
+		uint32 offset = sizeof(uint32);
+
+		while (offset < incoming->mlen)
+		{
+			uint64 h = 0;
+			int changed;
+
+			memcpy(&h, incoming->M + offset, sizeof(uint64));
+			offset += sizeof(uint64);
+
+			result = HLLAdd(result, &h, 0, &changed);
 		}
 	}
   else

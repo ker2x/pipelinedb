@@ -330,6 +330,64 @@ START_TEST(test_create_from_raw)
 }
 END_TEST
 
+START_TEST(test_lazy_add)
+{
+	HyperLogLog *lazy = HLLCreateLazy();
+	uint32 mem;
+	uint64 card;
+
+	/* this should max out the initial buffer */
+	lazy = add_elements(lazy, 0, 255);
+	ck_assert_int_eq(2044, lazy->mlen);
+
+	/* adding one more should cause it to be resized by 2x */
+	lazy = add_elements(lazy, 255, 256);
+
+	memcpy(&mem, lazy->M, sizeof(uint32));
+	ck_assert_int_eq(4096, mem);
+
+	card = HLLCardinality(lazy);
+	ck_assert_int_eq(255, card);
+
+	/* verify that it eventually converts to dense */
+	lazy = add_elements(lazy, 255, 10000);
+	ck_assert_int_eq(lazy->encoding, HLL_DENSE_DIRTY);
+}
+END_TEST
+
+START_TEST(test_lazy_union)
+{
+	HyperLogLog *hll = HLLCreate();
+	HyperLogLog *lazy = HLLCreateLazy();
+
+	/* sparse-lazy union */
+	hll = add_elements(hll, 0, 10);
+	lazy = add_elements(lazy, 10, 100);
+
+	hll = HLLUnion(hll, lazy);
+	ck_assert_int_eq(99, HLLCardinality(hll));
+
+	/* dense-lazy union */
+	hll = HLLCreate();
+	hll = add_elements(hll, 10, 10000);
+	ck_assert_int_eq(hll->encoding, HLL_DENSE_DIRTY);
+
+	hll = HLLUnion(hll, lazy);
+	ck_assert_int_eq(9946, HLLCardinality(hll));
+
+	/* lazy-lazy union */
+	hll = HLLCreateLazy();
+	lazy = HLLCreateLazy();
+
+	hll = add_elements(hll, 0, 1000);
+	lazy = add_elements(lazy, 1000, 2000);
+
+	hll = HLLUnion(hll, lazy);
+	ck_assert_int_eq(2003, HLLCardinality(hll));
+	ck_assert_int_eq(hll->encoding, HLL_DENSE_CLEAN);
+}
+END_TEST
+
 Suite *test_hll_suite(void)
 {
 	Suite *s;
@@ -347,6 +405,8 @@ Suite *test_hll_suite(void)
 	tcase_add_test(tc, test_union_sparse_and_dense);
 	tcase_add_test(tc, test_card_caching);
 	tcase_add_test(tc, test_create_from_raw);
+	tcase_add_test(tc, test_lazy_add);
+	tcase_add_test(tc, test_lazy_union);
 	suite_add_tcase(s, tc);
 
 	return s;
