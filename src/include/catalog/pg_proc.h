@@ -5088,8 +5088,8 @@ DESCR("aggregate combination function");
 DATA(insert OID = 5027 ( cq_percentile_cont_float8_final	PGNSP PGUID 12 1 0 0 0 f f f f f f i 2 0 701 "2281 701" _null_ _null_ _null_ _null_ cq_percentile_cont_float8_final _null_ _null_ _null_ ));
 DESCR("aggregate final function");
 
-DATA(insert OID = 5028 (hll_out PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 2275 "3998" _null_ _null_ _null_ _null_ hll_out _null_ _null_ _null_ ));
-DESCR("hyperloglog out function");
+DATA(insert OID = 5028 (hll_print PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 25 "3998" _null_ _null_ _null_ _null_ hll_print _null_ _null_ _null_ ));
+DESCR("hyperloglog print function");
 DATA(insert OID = 5029 (hll_in  PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 3998 "2275" _null_ _null_ _null_ _null_ hll_in  _null_ _null_ _null_ ));
 DESCR("hyperloglog in function");
 
@@ -5378,6 +5378,15 @@ DESCR("get continuous queries");
 
 DATA(insert OID = 4379 ( pipeline_streams PGNSP PGUID 12 1 1000 0 0 f f f f t t s 0 0 2249 "" "{25,25,16,1028,17}" "{o,o,o,o,o}" "{schema,name,inferred,queries,desc}" _null_ pipeline_streams _null_ _null_ _null_ ));
 DESCR("get streams");
+
+/* hyperloglog typmod */
+DATA(insert OID = 4380 ( hll_typmodin	PGNSP PGUID 12 1 0 0 0 f f f f t f i 1 0 23 "1263" _null_ _null_ _null_ _null_	hll_typmodin _null_ _null_ _null_ ));
+DESCR("hyperloglog typmod");
+DATA(insert OID = 4381 ( hll_typmodout	PGNSP PGUID 12 1 0 0 0 f f f f t f i 1 0 2275 "23" _null_ _null_ _null_ _null_	hll_typmodout _null_ _null_ _null_ ));
+DESCR("hyperloglog typmod");
+
+DATA(insert OID = 4382 ( hll_recv		PGNSP PGUID 12 1 0 0 0 f f f f t f i 1 0 3998 "2281" _null_ _null_ _null_ _null_ hll_recv _null_ _null_ _null_ ));
+DESCR("hyperloglog recv");
 
 /*
  * Symbolic values for provolatile column: these indicate whether the result

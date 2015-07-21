@@ -15,21 +15,54 @@
 #include "nodes/nodeFuncs.h"
 #include "pipeline/hll.h"
 #include "pipeline/miscutils.h"
+#include "utils/array.h"
+#include "utils/builtins.h"
+#include "utils/bytea.h"
 #include "utils/datum.h"
 #include "utils/hllfuncs.h"
 #include "utils/typcache.h"
 
-Datum
-hll_in(PG_FUNCTION_ARGS)
+static void
+check_typmod(HyperLogLog *hll, int32 typmod)
 {
-	ereport(ERROR,
-			(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-			errmsg("user-specified hyperloglogs are not supported")));
-	PG_RETURN_NULL();
+	if (hll->p != typmod)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				errmsg("hll p value does not match:"
+						"source uses %d and dest uses %d",
+						typmod, hll->p)));
 }
 
 Datum
-hll_out(PG_FUNCTION_ARGS)
+hll_in(PG_FUNCTION_ARGS)
+{
+	Datum d = DirectFunctionCall1(byteain, PG_GETARG_DATUM(0));
+	HyperLogLog *hll = (HyperLogLog *) DatumGetByteaP(d);
+	int32 typmod = PG_GETARG_INT32(2);
+
+	/* The typmod is valid for COPY statements. */
+	if (typmod != -1)
+		check_typmod(hll, typmod);
+
+	PG_RETURN_DATUM(d);
+}
+
+Datum
+hll_recv(PG_FUNCTION_ARGS)
+{
+	Datum d = DirectFunctionCall1(bytearecv, PG_GETARG_DATUM(0));
+	HyperLogLog *hll = (HyperLogLog *) DatumGetByteaP(d);
+	int32 typmod = PG_GETARG_INT32(2);
+
+	/* The typmod is valid for COPY statements. */
+	if (typmod != -1)
+		check_typmod(hll, typmod);
+
+	PG_RETURN_DATUM(d);
+}
+
+Datum
+hll_print(PG_FUNCTION_ARGS)
 {
 	StringInfoData buf;
 	HyperLogLog *hll = (HyperLogLog *) PG_GETARG_VARLENA_P(0);
@@ -37,7 +70,7 @@ hll_out(PG_FUNCTION_ARGS)
 	initStringInfo(&buf);
 	appendStringInfo(&buf, "{ p = %d, cardinality = %ld, size = %dkB }", hll->p, HLLCardinality(hll), hll->mlen / 1024);
 
-	PG_RETURN_CSTRING(buf.data);
+	PG_RETURN_TEXT_P(CStringGetTextDatum(buf.data));
 }
 
 static HyperLogLog *
@@ -218,7 +251,6 @@ hll_emptyp(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(hll);
 }
 
-
 Datum
 hll_add(PG_FUNCTION_ARGS)
 {
@@ -235,4 +267,40 @@ hll_add(PG_FUNCTION_ARGS)
 	fcinfo->flinfo->fn_extra = lookup_type_cache(get_fn_expr_argtype(fcinfo->flinfo, 1), 0);
 	hll = hll_add_datum(fcinfo, hll, PG_GETARG_DATUM(1));
 	PG_RETURN_POINTER(hll);
+}
+
+Datum
+hll_typmodin(PG_FUNCTION_ARGS)
+{
+	ArrayType *ta = PG_GETARG_ARRAYTYPE_P(0);
+	int32 *tl;
+	int n;
+
+	tl = ArrayGetIntegerTypmods(ta, &n);
+
+	if (n != 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("invalid type modifier for hll type")));
+
+	if (*tl > 14 || *tl < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("p must be in [1, 14] for hll type")));
+
+	PG_RETURN_INT32(*tl);
+}
+
+Datum
+hll_typmodout(PG_FUNCTION_ARGS)
+{
+	int32 typmod = PG_GETARG_INT32(0);
+	char *res = (char *) palloc(64);
+
+	if (typmod >= 0)
+		snprintf(res, 64, "(%d)", typmod);
+	else
+		*res = '\0';
+
+	PG_RETURN_CSTRING(res);
 }
