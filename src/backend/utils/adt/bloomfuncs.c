@@ -19,21 +19,13 @@
 #include "nodes/nodeFuncs.h"
 #include "pipeline/bloom.h"
 #include "pipeline/miscutils.h"
+#include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/bloomfuncs.h"
 #include "utils/typcache.h"
 
 Datum
-bloom_in(PG_FUNCTION_ARGS)
-{
-	ereport(ERROR,
-			(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-			errmsg("user-specified bloom filters are not supported")));
-	PG_RETURN_NULL();
-}
-
-Datum
-bloom_out(PG_FUNCTION_ARGS)
+bloom_print(PG_FUNCTION_ARGS)
 {
 	StringInfoData buf;
 	BloomFilter *bloom = (BloomFilter *) PG_GETARG_VARLENA_P(0);
@@ -41,7 +33,7 @@ bloom_out(PG_FUNCTION_ARGS)
 	initStringInfo(&buf);
 	appendStringInfo(&buf, "{ k = %d, m = %d, fill = %f, card = %ld, size = %ldkB }", bloom->k, bloom->m, BloomFilterFillRatio(bloom), BloomFilterCardinality(bloom), BloomFilterSize(bloom) / 1024);
 
-	PG_RETURN_CSTRING(buf.data);
+	PG_RETURN_TEXT_P(CStringGetTextDatum(buf.data));
 }
 
 static BloomFilter *

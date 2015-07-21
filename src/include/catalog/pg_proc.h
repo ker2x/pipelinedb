@@ -5091,20 +5091,16 @@ DESCR("aggregate final function");
 DATA(insert OID = 5028 (hll_print PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 25 "3998" _null_ _null_ _null_ _null_ hll_print _null_ _null_ _null_ ));
 DESCR("hyperloglog print function");
 
-DATA(insert OID = 5032 (bloom_out PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 2275 "5030" _null_ _null_ _null_ _null_ bloom_out _null_ _null_ _null_ ));
-DESCR("bloom filter out function");
-DATA(insert OID = 5033 (bloom_in  PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 5030 "2275" _null_ _null_ _null_ _null_ bloom_in  _null_ _null_ _null_ ));
-DESCR("bloom filter in function");
+DATA(insert OID = 5032 (bloom_print PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 25 "5030" _null_ _null_ _null_ _null_ bloom_print _null_ _null_ _null_ ));
+DESCR("bloom filter print function");
 
 DATA(insert OID = 5036 (tdigest_out PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 2275 "5034" _null_ _null_ _null_ _null_ tdigest_out _null_ _null_ _null_ ));
 DESCR("t-digest out function");
 DATA(insert OID = 5037 (tdigest_in  PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 5034 "2275" _null_ _null_ _null_ _null_ tdigest_in  _null_ _null_ _null_ ));
 DESCR("t-digest in function");
 
-DATA(insert OID = 5040 (cmsketch_out PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 2275 "5038" _null_ _null_ _null_ _null_ cmsketch_out _null_ _null_ _null_ ));
-DESCR("count-min sketch out function");
-DATA(insert OID = 5041 (cmsketch_in  PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 5038 "2275" _null_ _null_ _null_ _null_ cmsketch_in  _null_ _null_ _null_ ));
-DESCR("count-min sketch in function");
+DATA(insert OID = 5040 (cmsketch_print PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 25 "5038" _null_ _null_ _null_ _null_ cmsketch_print _null_ _null_ _null_ ));
+DESCR("count-min sketch print function");
 
 /* PipelineDB combiner stuff, heavily inspired by Postgres-XC coordinator aggregation */
 DATA(insert OID = 4301 ( float8_combine	PGNSP PGUID 12 1 0 0 0 f f f f t f i 2 0 1022 "1022 1022" _null_ _null_ _null_ _null_ float8_combine _null_ _null_ _null_ ));

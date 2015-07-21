@@ -17,21 +17,13 @@
 #include "nodes/nodeFuncs.h"
 #include "pipeline/cmsketch.h"
 #include "pipeline/miscutils.h"
+#include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/cmsketchfuncs.h"
 #include "utils/typcache.h"
 
 Datum
-cmsketch_in(PG_FUNCTION_ARGS)
-{
-	ereport(ERROR,
-			(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-			errmsg("user-specified count-min sketches are not supported")));
-	PG_RETURN_NULL();
-}
-
-Datum
-cmsketch_out(PG_FUNCTION_ARGS)
+cmsketch_print(PG_FUNCTION_ARGS)
 {
 	StringInfoData buf;
 	CountMinSketch *cms = (CountMinSketch *) PG_GETARG_VARLENA_P(0);
@@ -39,7 +31,7 @@ cmsketch_out(PG_FUNCTION_ARGS)
 	initStringInfo(&buf);
 	appendStringInfo(&buf, "{ d = %d, w = %d, count = %d, size = %ldkB }", cms->d, cms->w, cms->count, CountMinSketchSize(cms) / 1024);
 
-	PG_RETURN_CSTRING(buf.data);
+	PG_RETURN_TEXT_P(CStringGetTextDatum(buf.data));
 }
 
 static CountMinSketch *
