@@ -79,7 +79,7 @@ tdigest_agg_trans(PG_FUNCTION_ARGS)
 	if (PG_ARGISNULL(0))
 		state = tdigest_startup(fcinfo, 0);
 	else
-		state = (TDigest *) PG_GETARG_POINTER(0);
+		state = (TDigest *) PG_GETARG_VARLENA_P(0);
 
 	TDigestAdd(state, incoming, 1);
 
@@ -110,7 +110,7 @@ tdigest_agg_transp(PG_FUNCTION_ARGS)
 	if (PG_ARGISNULL(0))
 		state = tdigest_startup(fcinfo, k);
 	else
-		state = (TDigest *) PG_GETARG_POINTER(0);
+		state = (TDigest *) PG_GETARG_VARLENA_P(0);
 
 	TDigestAdd(state, incoming, 1);
 
@@ -130,7 +130,7 @@ tdigest_merge_agg_trans(PG_FUNCTION_ARGS)
 	MemoryContext old;
 	MemoryContext context;
 	TDigest *state;
-	TDigest *incoming = (TDigest *) PG_GETARG_VARLENA_P(0);
+	TDigest *incoming = (TDigest *) PG_GETARG_VARLENA_P(1);
 
 	if (!AggCheckCallContext(fcinfo, &context))
 		elog(ERROR, "tdigest_merge_agg_trans called in non-aggregate context");
@@ -138,10 +138,12 @@ tdigest_merge_agg_trans(PG_FUNCTION_ARGS)
 	old = MemoryContextSwitchTo(context);
 
 	if (PG_ARGISNULL(0))
-		state = TDigestCreateWithCompression(incoming->compression);
-	else
-		state = (TDigest *) PG_GETARG_POINTER(0);
+	{
+		state = TDigestCopy(incoming);
+		PG_RETURN_POINTER(state);
+	}
 
+	state = (TDigest *) PG_GETARG_VARLENA_P(0);
 	TDigestMerge(state, incoming);
 
 	MemoryContextSwitchTo(old);
