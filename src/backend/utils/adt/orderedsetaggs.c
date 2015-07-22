@@ -1811,9 +1811,7 @@ cqosastatesend(PG_FUNCTION_ARGS)
 	memcpy(pos, state->nulls, sizeof(bool) * state->num_percentiles);
 	pos += sizeof(bool) * state->num_percentiles;
 
-	memcpy(pos, t, sizeof(TDigest));
-	pos += sizeof(TDigest);
-	memcpy(pos, t->centroids, sizeof(Centroid) * t->num_centroids);
+	memcpy(pos, t, TDigestSize(t));
 
 	PG_RETURN_BYTEA_P(result);
 }
@@ -1840,12 +1838,7 @@ cqosastaterecv(PG_FUNCTION_ARGS)
 	pos += sizeof(bool) * state->num_percentiles;
 
 	state->tdigest = t;
-	memcpy(t, pos, sizeof(TDigest));
-
-	pos += sizeof(TDigest);
-	t->centroids = palloc0(sizeof(Centroid) * t->size);
-	memcpy(t->centroids, pos, sizeof(Centroid) * t->num_centroids);
-
+	memcpy(t, pos, TDigestSize(t));
 
 	PG_RETURN_POINTER(state);
 }
