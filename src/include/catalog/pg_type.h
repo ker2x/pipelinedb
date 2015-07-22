@@ -651,7 +651,7 @@ DATA(insert OID = 5031 ( _bloom	PGNSP PGUID -1 f b A f t \054 0  5030 0 array_in
 DESCR("bloom filter array");
 
 /* t-digest */
-DATA(insert OID = 5034 ( tdigest	PGNSP PGUID	-1 f b U f t \054 0	 0 5035 tdigest_in	tdigest_out   - - - - - i x f 0 -1 0 0 _null_ _null_ _null_ ));
+DATA(insert OID = 5034 ( tdigest	PGNSP PGUID	-1 f b U f t \054 0	 0 5035 byteain	byteaout   byteain byteasend - - - i x f 0 -1 0 0 _null_ _null_ _null_ ));
 DESCR("t-digest");
 DATA(insert OID = 5035 ( _tdigest	PGNSP PGUID -1 f b A f t \054 0  5034 0 array_in	array_out array_recv array_send - - array_typanalyze i x f 0 -1 0 0 _null_ _null_ _null_ ));
 DESCR("t-digest array");

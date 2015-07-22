@@ -5094,10 +5094,8 @@ DESCR("hyperloglog print function");
 DATA(insert OID = 5032 (bloom_print PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 25 "5030" _null_ _null_ _null_ _null_ bloom_print _null_ _null_ _null_ ));
 DESCR("bloom filter print function");
 
-DATA(insert OID = 5036 (tdigest_out PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 2275 "5034" _null_ _null_ _null_ _null_ tdigest_out _null_ _null_ _null_ ));
-DESCR("t-digest out function");
-DATA(insert OID = 5037 (tdigest_in  PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 5034 "2275" _null_ _null_ _null_ _null_ tdigest_in  _null_ _null_ _null_ ));
-DESCR("t-digest in function");
+DATA(insert OID = 5036 (tdigest_print PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 25 "5034" _null_ _null_ _null_ _null_ tdigest_print _null_ _null_ _null_ ));
+DESCR("t-digest print function");
 
 DATA(insert OID = 5040 (cmsketch_print PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 25 "5038" _null_ _null_ _null_ _null_ cmsketch_print _null_ _null_ _null_ ));
 DESCR("count-min sketch print function");
@@ -5250,10 +5248,6 @@ DESCR("t-digest cdf");
 /* t-digest quantile function */
 DATA(insert OID = 4346 ( tdigest_quantile	PGNSP PGUID 12 1 0 0 0 f f f f f f i 2 0 701 "5034 701" _null_ _null_ _null_ _null_ tdigest_quantile _null_ _null_ _null_ ));
 DESCR("t-digest quantile");
-
-/* t-digest serialize */
-DATA(insert OID = 4347 (tdigest_send PGNSP PGUID 12 1 0 0 0 f f f f f f i 1 0 17 "5034" _null_ _null_ _null_ _null_ tdigest_send _null_ _null_ _null_ ));
-DESCR("t-digest serialize");
 
 /* count-min sketch aggregate */
 DATA(insert OID = 4348 ( cmsketch_agg	PGNSP PGUID 12 1 0 0 0 t f f f f f i 1 0 5038 "2283" _null_ _null_ _null_ _null_ aggregate_dummy _null_ _null_ _null_ ));

@@ -17,7 +17,6 @@
 #include "pipeline/miscutils.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
-#include "utils/bytea.h"
 #include "utils/datum.h"
 #include "utils/hllfuncs.h"
 #include "utils/typcache.h"
