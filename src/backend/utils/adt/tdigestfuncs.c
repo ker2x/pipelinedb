@@ -54,6 +54,8 @@ tdigest_startup(FunctionCallInfo fcinfo, uint32_t k)
 	else
 		t = TDigestCreate();
 
+	SET_VARSIZE(t, TDigestSize(t));
+
 	return t;
 }
 
